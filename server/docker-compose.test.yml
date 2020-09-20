@@ -1,0 +1,23 @@
+version: "3.4"
+services:
+  app:
+    depends_on:
+      - db
+    container_name: server
+    build:
+      context: .
+      target: unit-tests
+    links:
+      - db
+    ports:
+      - 3000:3000
+
+  db:
+    image: mongo:3.2
+    container_name: mongo
+    restart: unless-stopped
+
+networks:
+  microservices-network:
+    external:
+      name: microservices-network
