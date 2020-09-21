@@ -1,4 +1,4 @@
-version: "3"
+version: "3.4"
 services:
   app:
     depends_on:
@@ -14,8 +14,3 @@ services:
     image: mongo:3.2
     container_name: mongo
     restart: unless-stopped
-
-networks:
-  microservices-network:
-    external:
-      name: microservices-network
