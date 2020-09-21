@@ -1,18 +1,14 @@
-version: "3.4"
+version: "3"
 services:
   app:
     depends_on:
       - db
     container_name: server
-    build:
-      context: .
-      target: unit-tests
+    build: .
     links:
       - db
     ports:
       - 3000:3000
-    volumes:
-      - "./:/usr/src/app"
 
   db:
     image: mongo:3.2

@@ -10,6 +10,7 @@ COPY . .
 FROM node:14.8.0-alpine as unit-tests
 WORKDIR /usr/src/app
 COPY --from=builder /usr/src/app/ .
+RUN npm install -g jest
 CMD ["npm", "test"]
 
 # Starts and Serves Web Page

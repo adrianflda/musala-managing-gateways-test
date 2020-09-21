@@ -20,8 +20,8 @@ afterAll(async () => {
 describe("Tests the hello world queries", () => {
   it("should return hello world", async () => {
     const helloWorld = gql`
-      query helloWorld {
-        helloWorld
+      query sayHello {
+        sayHello
       }
     `;
 
@@ -29,6 +29,20 @@ describe("Tests the hello world queries", () => {
       query: helloWorld,
     });
 
-    expect(data.helloWorld).toBe("Hello World!");
+    expect(data.sayHello).toBe("Hello World");
+  });
+
+  it("should return hi world", async () => {
+    const sayHi = gql`
+      query sayHi {
+        sayHi
+      }
+    `;
+
+    const { data } = await query({
+      query: sayHi,
+    });
+
+    expect(data.sayHi).toBe("Hi world");
   });
 });

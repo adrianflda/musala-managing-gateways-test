@@ -2,8 +2,7 @@ const { createTestClient } = require("apollo-server-testing");
 const { ApolloServer } = require("apollo-server-express");
 const mongoose = require("mongoose");
 
-const resolvers = require("../graphql/resolvers");
-const typeDefs = require("../graphql/schemas");
+const { typeDefs, resolvers } = require("../graphql/schema");
 
 const GatewayModel = require("../models/Gateway");
 const PeripheralModel = require("../models/Peripheral");
@@ -38,12 +37,14 @@ const server = new ApolloServer({
   }),
 });
 
-const { ObjectId } = require("mongodb");
+const gen = (top = 10) => Math.trunc(Math.random() * top);
+const mockAddress = () => `${gen(100)}.${gen(100)}.${gen(100)}.${gen(100)}`;
 
 module.exports = {
   testClient: createTestClient(server),
   connectToDb,
   closeDbConnection,
   dropTestDb,
-  ObjectId,
+  mockAddress,
+  gen,
 };
