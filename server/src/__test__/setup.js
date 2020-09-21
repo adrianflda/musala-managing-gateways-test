@@ -38,7 +38,14 @@ const server = new ApolloServer({
 });
 
 const gen = (top = 10) => Math.trunc(Math.random() * top);
+
 const mockAddress = () => `${gen(100)}.${gen(100)}.${gen(100)}.${gen(100)}`;
+
+const newGateway = () => ({
+  serial: `${gen()}`,
+  name: `gateway ${gen()}`,
+  address: mockAddress(),
+});
 
 module.exports = {
   testClient: createTestClient(server),
@@ -47,4 +54,5 @@ module.exports = {
   dropTestDb,
   mockAddress,
   gen,
+  newGateway,
 };

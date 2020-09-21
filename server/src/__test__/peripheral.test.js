@@ -1,4 +1,4 @@
-const { gql } = require("apollo-server-express");
+const { gql } = require("apollo-server");
 const {
   testClient,
   connectToDb,
@@ -6,7 +6,11 @@ const {
   closeDbConnection,
   gen,
 } = require("./setup");
+
 const { query, mutate } = testClient;
+const uid = gen(10000);
+const date_created = new Date();
+const date_result = date_created.getTime();
 
 beforeAll(async () => {
   await connectToDb();
@@ -17,10 +21,6 @@ afterAll(async () => {
   await dropTestDb();
   await closeDbConnection();
 });
-
-const uid = gen(10000);
-const date_created = new Date();
-const date_result = date_created.getTime();
 
 describe("Tests the peripheral mutations", () => {
   it("should successfully add a peripheral", async () => {

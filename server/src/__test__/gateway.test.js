@@ -1,4 +1,4 @@
-const { gql } = require("apollo-server-express");
+const { gql } = require("apollo-server");
 const {
   testClient,
   connectToDb,
@@ -6,15 +6,34 @@ const {
   closeDbConnection,
   gen,
   mockAddress,
+  newGateway,
 } = require("./setup");
 
 const { query, mutate } = testClient;
 let n = gen();
 const peripheralsId = [...Array(15)].map(() => `${++n}`);
-const gateway1 = {
-  serial: `${gen()}`,
-  name: `gateway ${gen()}`,
-  address: mockAddress(),
+
+const addNewGateway = async (gateway = newGateway()) => {
+  const ADD_GATEWAY = gql`
+    mutation addGateway($serial: String!, $name: String!, $address: String!) {
+      addGateway(serial: $serial, name: $name, address: $address) {
+        serial
+        name
+        address
+      }
+    }
+  `;
+
+  let { data, errors } = await mutate({
+    mutation: ADD_GATEWAY,
+    variables: {
+      ...gateway,
+    },
+  });
+
+  errors && console.log(errors);
+
+  return { gateway: data && data.addGateway, errors };
 };
 
 beforeAll(async () => {
@@ -24,59 +43,45 @@ beforeAll(async () => {
 
 afterAll(async () => {
   await dropTestDb();
+  const gateways = gql`
+    query {
+      getGateways {
+        serial
+      }
+    }
+  `;
+
+  let { data } = await query({
+    query: gateways,
+  });
+
+  console.log(JSON.stringify(data));
+
   await closeDbConnection();
 });
 
 describe("Tests the gateway mutations", () => {
   it("should successfully add a gateway", async () => {
-    const addGateway1 = gql`
-      mutation addGateway($serial: String!, $name: String!, $address: String!) {
-        addGateway(serial: $serial, name: $name, address: $address) {
-          serial
-          name
-          address
-        }
-      }
-    `;
+    let newG = newGateway();
+    let { gateway } = await addNewGateway(newG);
 
-    const { data } = await mutate({
-      mutation: addGateway1,
-      variables: {
-        ...gateway1,
-      },
-    });
-
-    expect(data.addGateway).toMatchObject(gateway1);
+    expect(gateway).toMatchObject(newG);
   });
 
   it("should not add two gateways with the same serial", async () => {
-    const addGateway2 = gql`
-      mutation addGateway($serial: String!, $name: String!, $address: String!) {
-        addGateway(serial: $serial, name: $name, address: $address) {
-          serial
-          name
-          address
-        }
-      }
-    `;
+    let newG = newGateway();
+    let { gateway } = await addNewGateway(newG);
 
-    const gateway = {
-      serial: gateway1.serial,
-      name: "gateway 1",
-      address: mockAddress(),
-    };
+    let otherG = newGateway();
+    otherG.serial = newG.serial;
 
-    const { errors } = mutate({
-      mutation: addGateway2,
-      variables: {
-        ...gateway,
-      },
-    });
-
-    expect(errors);
+    expect((await addNewGateway(otherG)).errors);
   });
 
   it("should successfully add one peripheral to a gateway", async () => {
+    let newG = newGateway();
+    let { gateway } = await addNewGateway(newG);
+
     const addPeripheralToGateway = gql`
       mutation addPeripheralToGateway(
         $serial: String!
@@ -89,15 +94,11 @@ describe("Tests the gateway mutations", () => {
       }
     `;
 
-    const params = {
-      serial: gateway1.serial,
-      peripheralId: peripheralsId[gen()],
-    };
-
-    const { data, errors } = await mutate({
+    let { data } = await mutate({
       mutation: addPeripheralToGateway,
       variables: {
-        ...params,
+        serial: gateway.serial,
+        peripheralId: peripheralsId[gen()],
       },
     });
 
@@ -105,6 +106,9 @@ describe("Tests the gateway mutations", () => {
   });
 
   it("should successfully update a gateway", async () => {
+    let newG = newGateway();
+    let { gateway } = await addNewGateway(newG);
+
     const updateGateway = gql`
       mutation updateGateway($serial: String!, $peripherals: [String]!) {
         updateGateway(serial: $serial, peripherals: $peripherals) {
@@ -114,23 +118,38 @@ describe("Tests the gateway mutations", () => {
       }
     `;
 
-    const params = {
-      serial: gateway1.serial,
-      peripherals: peripheralsId.slice(0, 9),
-    };
-
-    const { data, errors } = await mutate({
+    let { data } = await mutate({
       mutation: updateGateway,
       variables: {
-        ...params,
+        serial: gateway.serial,
+        peripherals: peripheralsId.slice(0, 9),
       },
     });
 
-    gateway1.peripherals = data.updateGateway.peripherals;
     expect(data.updateGateway.peripherals.length).toBe(9);
   });
 
   it("should not add more than 10 peripherals to a gateways", async () => {
+    let newG = newGateway();
+    let { gateway } = await addNewGateway(newG);
+
+    const updateGateway = gql`
+      mutation updateGateway($serial: String!, $peripherals: [String]!) {
+        updateGateway(serial: $serial, peripherals: $peripherals) {
+          serial
+          peripherals
+        }
+      }
+    `;
+
+    let { data } = await mutate({
+      mutation: updateGateway,
+      variables: {
+        serial: gateway.serial,
+        peripherals: peripheralsId.slice(0, 10),
+      },
+    });
+
     const addPeripheralToGateway = gql`
       mutation addPeripheralToGateway(
         $serial: String!
@@ -143,22 +162,43 @@ describe("Tests the gateway mutations", () => {
       }
     `;
 
-    const params = {
-      serial: gateway1.serial,
-      peripheralId: peripheralsId[10],
-    };
-
-    const { errors } = await mutate({
+    let { errors } = await mutate({
       mutation: addPeripheralToGateway,
       variables: {
-        ...params,
+        serial: gateway.serial,
+        peripheralId: peripheralsId[11],
       },
     });
 
     expect(errors);
   });
 
-  it("should successfully remove peripherals", async () => {
+  it("should successfully add and remove peripherals", async () => {
+    let newG = newGateway();
+    let { gateway } = await addNewGateway(newG);
+
+    const addPeripheralToGateway = gql`
+      mutation addPeripheralToGateway(
+        $serial: String!
+        $peripheralId: String!
+      ) {
+        addPeripheralToGateway(serial: $serial, peripheralId: $peripheralId) {
+          serial
+          peripherals
+        }
+      }
+    `;
+
+    let result = await mutate({
+      mutation: addPeripheralToGateway,
+      variables: {
+        serial: gateway.serial,
+        peripheralId: peripheralsId[0],
+      },
+    });
+
+    expect(result.data.addPeripheralToGateway.peripherals.length).not.toBe(0);
+
     const removePeripheralFromGateway = gql`
       mutation removePeripheralFromGateway(
         $serial: String!
@@ -174,19 +214,15 @@ describe("Tests the gateway mutations", () => {
       }
     `;
 
-    const params = {
-      serial: gateway1.serial,
-      peripheralId: peripheralsId[0],
-    };
-
-    const { data, errors } = await mutate({
+    let { data } = await mutate({
       mutation: removePeripheralFromGateway,
       variables: {
-        ...params,
+        serial: gateway.serial,
+        peripheralId: peripheralsId[0],
       },
     });
 
-    const expected = [...peripheralsId];
+    const expected = [peripheralsId[0]];
     expect(data.removePeripheralFromGateway.peripherals).toEqual(
       expect.not.arrayContaining(expected)
     );
@@ -195,6 +231,9 @@ describe("Tests the gateway mutations", () => {
 
 describe("Tests the gateway queries", () => {
   it("should return all gateways", async () => {
+    let newG = newGateway();
+    let { gateway } = await addNewGateway(newG);
+
     const gateways = gql`
       query {
         getGateways {
@@ -203,14 +242,14 @@ describe("Tests the gateway queries", () => {
       }
     `;
 
-    const { data } = await query({
+    let { data } = await query({
       query: gateways,
     });
 
     expect(data.getGateways).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          serial: gateway1.serial,
+          serial: gateway.serial,
         }),
       ])
     );

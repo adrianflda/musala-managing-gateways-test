@@ -1,3 +1,4 @@
+const { ApolloServer } = require("apollo-server");
 const { typeDefs, resolvers } = require("./graphql/schema");
 const mongoose = require("mongoose");
 
@@ -10,7 +11,6 @@ mongoose
   .then(() => console.log("connection successful"))
   .catch((err) => console.error(err));
 
-const { ApolloServer, gql } = require("apollo-server");
 const server = new ApolloServer({ typeDefs, resolvers });
 // The `listen` method launches a web server.
 server.listen({ port: 3000 }).then(({ url }) => {

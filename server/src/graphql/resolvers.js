@@ -3,7 +3,6 @@ const { Kind } = require("graphql/language");
 
 const GatewayResolvers = require("./gateway/gateway.resolvers");
 const PeripheralResolvers = require("./peripheral/peripheral.resolvers");
-const Helloworld = require("./helloworld/helloworld.resolvers");
 
 const Mutation = {
   ...GatewayResolvers.Mutation,
@@ -11,7 +10,6 @@ const Mutation = {
 };
 
 const Query = {
-  ...Helloworld,
   ...GatewayResolvers.Query,
   ...PeripheralResolvers.Query,
 };
